@@ -127,40 +127,42 @@ async function scrapeIndeed() {
   return jobs;
 }
 
-// ── Combine & Post ──
-async function checkJobs() {
-  const results = await Promise.allSettled([
-    scrapeLinkedIn(),
-    scrapeBayt(),
-    scrapeNaukriGulf(),
-    scrapeIndeed(),
-  ]);
 
-  const allJobs = results
-    .filter((r) => r.status === "fulfilled")
-    .flatMap((r) => r.value);
-
-  const channel = client.channels.cache.get(CHANNEL_ID);
-  if (!channel) {
-    console.error("❌ Discord channel not found.");
-    return;
-  }
-
-  allJobs.forEach((job) => {
-    if (!seenJobs.has(job.href)) {
-      seenJobs.add(job.href);
-      channel.send(`💼 **${job.title}**\n🌐 ${job.source}\n🔗 ${job.href}`);
-    }
-  });
-}
-
-// Express Route to Trigger Job Scraping
 app.get("/scrape-jobs", async (req, res) => {
   try {
-    await checkJobs();
-    res.status(200).send("Job scraping completed successfully!");
+    const results = await Promise.allSettled([
+      scrapeLinkedIn(),
+      scrapeBayt(),
+      scrapeNaukriGulf(),
+      scrapeIndeed(),
+    ]);
+
+    const allJobs = results
+      .filter((r) => r.status === "fulfilled")
+      .flatMap((r) => r.value);
+
+    const newJobs = [];
+
+    allJobs.forEach((job) => {
+      if (!seenJobs.has(job.href)) {
+        seenJobs.add(job.href);
+        client.channels.cache
+          .get(CHANNEL_ID)
+          ?.send(`💼 **${job.title}**\n🌐 ${job.source}\n🔗 ${job.href}`);
+        newJobs.push(job); // save to send in response
+      }
+    });
+
+    res.status(200).json({
+      message: "✅ Job scraping completed.",
+      jobsFound: newJobs.length,
+      jobs: newJobs,
+    });
   } catch (error) {
-    res.status(500).send("Error during job scraping: " + error.message);
+    res.status(500).json({
+      message: "❌ Error during job scraping.",
+      error: error.message,
+    });
   }
 });
 
@@ -179,3 +181,15 @@ client.login(BOT_TOKEN);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+
+// Self-ping every 14 minutes to prevent Render free tier timeout
+setInterval(() => {
+  axios
+    .get("https://dubai-job-alert-bot.onrender.com/scrape-jobs")
+    .then(() => console.log("🔁 Self-ping to keep Render alive"))
+    .catch((err) =>
+      console.error("⚠️ Self-ping failed:", err.message)
+    );
+}, 14 * 60 * 1000); // 14 minutes
+
