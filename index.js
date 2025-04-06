@@ -128,7 +128,7 @@ async function scrapeIndeed() {
 }
 
 
-app.get("/scrape-jobs", async (req, res) => {
+async function checkJobs() {
   try {
     const results = await Promise.allSettled([
       scrapeLinkedIn(),
@@ -141,22 +141,29 @@ app.get("/scrape-jobs", async (req, res) => {
       .filter((r) => r.status === "fulfilled")
       .flatMap((r) => r.value);
 
-    const newJobs = [];
-
     allJobs.forEach((job) => {
       if (!seenJobs.has(job.href)) {
         seenJobs.add(job.href);
         client.channels.cache
           .get(CHANNEL_ID)
           ?.send(`💼 **${job.title}**\n🌐 ${job.source}\n🔗 ${job.href}`);
-        newJobs.push(job); // save to send in response
       }
     });
 
+    console.log(`✅ Checked jobs. New jobs posted: ${allJobs.length}`);
+  } catch (err) {
+    console.error("❌ Error during job check:", err.message);
+  }
+}
+
+
+
+app.get("/scrape-jobs", async (req, res) => {
+  try {
+    await checkJobs();
     res.status(200).json({
       message: "✅ Job scraping completed.",
-      jobsFound: newJobs.length,
-      jobs: newJobs,
+      jobsCount: seenJobs.size,
     });
   } catch (error) {
     res.status(500).json({
