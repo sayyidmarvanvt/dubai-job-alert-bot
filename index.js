@@ -1,8 +1,12 @@
 require("dotenv").config();
+const express = require("express");
 const { Client, GatewayIntentBits } = require("discord.js");
 const axios = require("axios");
 const cheerio = require("cheerio");
 const cron = require("node-cron");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 const client = new Client({
   intents: [
@@ -150,13 +154,28 @@ async function checkJobs() {
   });
 }
 
+// Express Route to Trigger Job Scraping
+app.get("/scrape-jobs", async (req, res) => {
+  try {
+    await checkJobs();
+    res.status(200).send("Job scraping completed successfully!");
+  } catch (error) {
+    res.status(500).send("Error during job scraping: " + error.message);
+  }
+});
+
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-  checkJobs();
+  checkJobs(); // Initial job check when the bot starts
   cron.schedule("*/30 * * * *", () => {
     console.log("🔍 Checking for new jobs...");
-    checkJobs();
+    checkJobs(); // Periodic job check every 30 minutes
   });
 });
 
 client.login(BOT_TOKEN);
+
+// Start Express server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
