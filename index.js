@@ -24,8 +24,14 @@ const searchKeywords = ["mern", "react", "node", "full stack", "web developer"];
 
 function matchesKeywords(title, description = "") {
   const text = (title + " " + description).toLowerCase();
+  // If description is empty, just check the title
+  if (description.trim() === "") {
+    return searchKeywords.some((kw) => title.toLowerCase().includes(kw));
+  }
+  // Otherwise, check both title and description
   return searchKeywords.some((kw) => text.includes(kw));
 }
+
 
 // ── LinkedIn ──
 // list → fetch detail → extract #job-details
