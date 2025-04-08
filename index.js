@@ -1,102 +1,51 @@
 require("dotenv").config();
+
+const client = require("./discord/client");
+const { scrapeLinkedIn, scrapeBayt } = require("./jobs");
+const { getUniqueJobKey } = require("./utils/helper");
 const express = require("express");
-const { Client, GatewayIntentBits } = require("discord.js");
-const axios = require("axios");
-const cheerio = require("cheerio");
-const puppeteer = require("puppeteer");
 const cron = require("node-cron");
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
-});
 
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
 const seenJobs = new Set();
-const searchKeywords = ["react","mern","node","software","junior"];
-
-const headers = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-  "Accept-Language": "en-US,en;q=0.9",
-};
-
-// ── Bayt ──
-async function scrapeBayt() {
-  const url = "https://www.bayt.com/en/uae/jobs/react-developer-jobs/";
-  const { data } = await axios.get(url, { headers });
-  const $ = cheerio.load(data);
-  const jobs = [];
-
-  $('a[href*="/en/uae/jobs/"]').each((_, el) => {
-    const title = $(el).text().trim();
-    const href = "https://www.bayt.com" + $(el).attr("href");
-    if (matchesKeywords(title)) {
-      jobs.push({ title, href, source: "Bayt" });
-    }
-  });
-  console.log(jobs);
-  return jobs;
-}
-
-async function scrapeLinkedIn() {
-  const url =
-    "https://www.linkedin.com/jobs/search/?keywords=react&location=Dubai&f_E=1%2C2";
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-  await page.goto(url, { waitUntil: "domcontentloaded" });
-
-  const jobs = await page.evaluate(() => {
-    const jobElements = document.querySelectorAll('a[href*="/jobs/view/"]');
-    const jobList = [];
-
-    jobElements.forEach((el) => {
-      const title = el.innerText.trim();
-      const href = "https://www.linkedin.com" + el.getAttribute("href");
-      if (title.toLowerCase().includes("react")) {
-        jobList.push({ title, href, source: "LinkedIn" });
-      }
-    });
-
-    return jobList;
-  });
-
-  await browser.close();
-  console.log(jobs);
-  return jobs;
-}
-
-function matchesKeywords(title) {
-  const text = title.toLowerCase();
-  return searchKeywords.some((kw) => text.includes(kw));
-}
 
 async function checkJobs() {
   try {
     const results = await Promise.allSettled([scrapeLinkedIn(), scrapeBayt()]);
-
     const allJobs = results
       .filter((r) => r.status === "fulfilled")
       .flatMap((r) => r.value);
 
-    allJobs.forEach((job) => {
-      if (!seenJobs.has(job.href)) {
-        seenJobs.add(job.href);
+    const uniqueJobsMap = new Map();
+
+    for (const job of allJobs) {
+      const key = getUniqueJobKey(job);
+      if (!uniqueJobsMap.has(key)) {
+        uniqueJobsMap.set(key, job);
+      }
+    }
+
+    const uniqueJobs = Array.from(uniqueJobsMap.values());
+
+    let newCount = 0;
+    for (const job of uniqueJobs) {
+      const key = getUniqueJobKey(job);
+      if (!seenJobs.has(key)) {
+        seenJobs.add(key);
+        newCount++;
         client.channels.cache
           .get(CHANNEL_ID)
           ?.send(`💼 **${job.title}**\n🌐 ${job.source}\n🔗 ${job.href}`);
       }
-    });
+    }
 
-    console.log(`✅ Checked jobs. New jobs posted: ${allJobs.length}`);
+    console.log(`✅ Checked jobs. New unique jobs posted: ${newCount}`);
   } catch (err) {
     console.error("❌ Error during job check:", err.message);
   }
