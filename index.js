@@ -3,6 +3,7 @@ const express = require("express");
 const { Client, GatewayIntentBits } = require("discord.js");
 const axios = require("axios");
 const cheerio = require("cheerio");
+const puppeteer = require("puppeteer");
 const cron = require("node-cron");
 
 const app = express();
@@ -20,128 +21,67 @@ const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
 const seenJobs = new Set();
-const searchKeywords = ["mern", "react", "node", "full stack", "web developer"];
+const searchKeywords = ["react","mern","node","software","junior"];
 
-function matchesKeywords(title, description = "") {
-  const text = (title + " " + description).toLowerCase();
-  // If description is empty, just check the title
-  if (description.trim() === "") {
-    return searchKeywords.some((kw) => title.toLowerCase().includes(kw));
-  }
-  // Otherwise, check both title and description
-  return searchKeywords.some((kw) => text.includes(kw));
-}
-
-
-// ── LinkedIn ──
-// list → fetch detail → extract #job-details
-async function scrapeLinkedIn() {
-  const url =
-    "https://www.linkedin.com/jobs/search/?keywords=mern&location=Dubai&f_E=1%2C2";
-  const { data } = await axios.get(url);
-  const $ = cheerio.load(data);
-  const listings = [];
-
-  $("a.job-card-list__title--link").each((_, el) => {
-    const title = $(el).text().trim();
-    const href = "https://www.linkedin.com" + $(el).attr("href");
-    listings.push({ title, href });
-  });
-
-  const jobs = await Promise.all(
-    listings.map(async ({ title, href }) => {
-      try {
-        const res = await axios.get(href);
-        const $d = cheerio.load(res.data);
-        const description = $d("#job-details").text().trim();
-        if (matchesKeywords(title, description)) {
-          return { title, href, source: "LinkedIn" };
-        }
-      } catch (e) {
-        console.error("LinkedIn detail error:", href, e.message);
-      }
-      return null;
-    })
-  );
-
-  return jobs.filter(Boolean);
-}
+const headers = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
 // ── Bayt ──
-// extract title, href, and listing snippet from .jb-descr
 async function scrapeBayt() {
-  const url =
-    "https://www.bayt.com/en/uae/jobs/react-developer-jobs/?filters%5Bjb_last_modification_date_interval%5D%5B%5D=3";
-  const { data } = await axios.get(url);
+  const url = "https://www.bayt.com/en/uae/jobs/react-developer-jobs/";
+  const { data } = await axios.get(url, { headers });
   const $ = cheerio.load(data);
   const jobs = [];
 
-  $("li[data-js-job]").each((_, el) => {
-    const title = $(el).find("h2 a").text().trim();
-    const href = "https://www.bayt.com" + $(el).find("h2 a").attr("href");
-    const description = $(el).find("div.jb-descr.m10t.t-small").text().trim();
-    if (matchesKeywords(title, description)) {
+  $('a[href*="/en/uae/jobs/"]').each((_, el) => {
+    const title = $(el).text().trim();
+    const href = "https://www.bayt.com" + $(el).attr("href");
+    if (matchesKeywords(title)) {
       jobs.push({ title, href, source: "Bayt" });
     }
   });
-
+  console.log(jobs);
   return jobs;
 }
 
-// ── NaukriGulf ──
-// extract title, href, and snippet from p.description
-async function scrapeNaukriGulf() {
+async function scrapeLinkedIn() {
   const url =
-    "https://www.naukrigulf.com/mern-jobs-in-uae-and-dubai?experience=0&titles=2710,9947";
-  const { data } = await axios.get(url);
-  const $ = cheerio.load(data);
-  const jobs = [];
+    "https://www.linkedin.com/jobs/search/?keywords=react&location=Dubai&f_E=1%2C2";
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.goto(url, { waitUntil: "domcontentloaded" });
 
-  $("div.ng-box.srp-tuple").each((_, el) => {
-    const title = $(el).find("p.designation-title").text().trim();
-    const href = $(el).find("a.info-position").attr("href");
-    const description = $(el).find("p.description").text().trim();
-    if (matchesKeywords(title, description)) {
-      jobs.push({ title, href, source: "NaukriGulf" });
-    }
+  const jobs = await page.evaluate(() => {
+    const jobElements = document.querySelectorAll('a[href*="/jobs/view/"]');
+    const jobList = [];
+
+    jobElements.forEach((el) => {
+      const title = el.innerText.trim();
+      const href = "https://www.linkedin.com" + el.getAttribute("href");
+      if (title.toLowerCase().includes("react")) {
+        jobList.push({ title, href, source: "LinkedIn" });
+      }
+    });
+
+    return jobList;
   });
 
+  await browser.close();
+  console.log(jobs);
   return jobs;
 }
 
-// ── Indeed ──
-// each container .css-pt3vth.e37uo190 → title, link, snippet
-async function scrapeIndeed() {
-  const url = "https://ae.indeed.com/jobs?q=react&l=Dubai&fromage=1";
-  const { data } = await axios.get(url);
-  const $ = cheerio.load(data);
-  const jobs = [];
-
-  $("div.css-pt3vth.e37uo190").each((_, el) => {
-    const title = $(el).find("h2.jobTitle span[title]").text().trim();
-    const href =
-      "https://ae.indeed.com" + $(el).find("h2.jobTitle a").attr("href");
-    const description = $(el)
-      .find("div[data-testid='jobsnippet_footer']")
-      .text()
-      .trim();
-    if (matchesKeywords(title, description)) {
-      jobs.push({ title, href, source: "Indeed" });
-    }
-  });
-
-  return jobs;
+function matchesKeywords(title) {
+  const text = title.toLowerCase();
+  return searchKeywords.some((kw) => text.includes(kw));
 }
-
 
 async function checkJobs() {
   try {
-    const results = await Promise.allSettled([
-      scrapeLinkedIn(),
-      scrapeBayt(),
-      scrapeNaukriGulf(),
-      scrapeIndeed(),
-    ]);
+    const results = await Promise.allSettled([scrapeLinkedIn(), scrapeBayt()]);
 
     const allJobs = results
       .filter((r) => r.status === "fulfilled")
@@ -161,8 +101,6 @@ async function checkJobs() {
     console.error("❌ Error during job check:", err.message);
   }
 }
-
-
 
 app.get("/scrape-jobs", async (req, res) => {
   try {
@@ -195,14 +133,10 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-
 // Self-ping every 14 minutes to prevent Render free tier timeout
 setInterval(() => {
   axios
     .get("https://dubai-job-alert-bot.onrender.com/scrape-jobs")
     .then(() => console.log("🔁 Self-ping to keep Render alive"))
-    .catch((err) =>
-      console.error("⚠️ Self-ping failed:", err.message)
-    );
+    .catch((err) => console.error("⚠️ Self-ping failed:", err.message));
 }, 14 * 60 * 1000); // 14 minutes
-
