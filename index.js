@@ -17,33 +17,35 @@ const seenJobs = new Set();
 
 async function checkJobs() {
   try {
-    const results = await Promise.allSettled([scrapeLinkedIn(), scrapeBayt()]);
+    const results = await Promise.allSettled([scrapeLinkedIn(), scrapeBayt()]);    
     const allJobs = results
       .filter((r) => r.status === "fulfilled")
       .flatMap((r) => r.value);
 
     const uniqueJobsMap = new Map();
 
-    for (const job of allJobs) {
-      const key = getUniqueJobKey(job);
-      if (!uniqueJobsMap.has(key)) {
-        uniqueJobsMap.set(key, job);
-      }
-    }
+   for (const job of allJobs) {
+     const key = getUniqueJobKey(job);
+     console.log(`Generated Key: ${key}`); // Log the key for debugging
+     if (!uniqueJobsMap.has(key)) {
+       uniqueJobsMap.set(key, job);
+     }
+   }
 
-    const uniqueJobs = Array.from(uniqueJobsMap.values());
+ const uniqueJobs = Array.from(uniqueJobsMap.values());
 
-    let newCount = 0;
-    for (const job of uniqueJobs) {
-      const key = getUniqueJobKey(job);
-      if (!seenJobs.has(key)) {
-        seenJobs.add(key);
-        newCount++;
-        client.channels.cache
-          .get(CHANNEL_ID)
-          ?.send(`💼 **${job.title}**\n🌐 ${job.source}\n🔗 ${job.href}`);
-      }
-    }
+ // New jobs counter
+ let newCount = 0;
+ for (const job of uniqueJobs) {
+   const key = getUniqueJobKey(job);
+   if (!seenJobs.has(key)) {
+     seenJobs.add(key);
+     newCount++;
+     client.channels.cache
+       .get(CHANNEL_ID)
+       ?.send(`💼 **${job.title}**\n🌐 ${job.source}\n🔗 ${job.href}`);
+   }
+ }
 
     console.log(`✅ Checked jobs. New unique jobs posted: ${newCount}`);
   } catch (err) {
