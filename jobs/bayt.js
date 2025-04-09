@@ -10,7 +10,8 @@ const headers = {
 
 
 async function scrapeBayt() {
-  const url = "https://www.bayt.com/en/uae/jobs/react-developer-jobs/";
+  const url =
+    "https://www.bayt.com/en/uae/jobs/react-developer-jobs/?filters%5Bjb_last_modification_date_interval%5D%5B%5D=3";
   const { data } = await axios.get(url, { headers });
   const $ = cheerio.load(data);
   const jobs = [];
