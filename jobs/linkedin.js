@@ -1,56 +1,31 @@
-const puppeteer = require("puppeteer");
+const axios = require("axios");
+const cheerio = require("cheerio");
 const { matchesKeywords } = require("../utils/helper");
 
 async function scrapeLinkedIn() {
-  const url =
-    "https://www.linkedin.com/jobs/search/?keywords=react&location=Dubai&f_E=1%2C2";
-
-  // Launch browser with minimal configuration
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--single-process",
-    ],
-  });
-
-  const page = await browser.newPage();
-
   try {
-    // Navigate to page
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    const response = await axios.get(
+      "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=react&location=Dubai&f_E=1%2C2"
+    );
+    const $ = cheerio.load(response.data);
 
-    // Wait for job listings to load
-    await page.waitForSelector(".jobs-search__results-list", {
-      timeout: 15000,
+    const jobs = [];
+    $("li").each((i, elem) => {
+      const title = $(elem).find("h3").text().trim();
+      const href = $(elem).find("a").attr("href");
+      if (title && href && matchesKeywords(title)) {
+        jobs.push({
+          title,
+          href: href.split("?")[0],
+          source: "LinkedIn",
+        });
+      }
     });
 
-    // Get all job cards
-    const jobs = await page.evaluate(() => {
-      const items = [];
-      document.querySelectorAll("a.base-card__full-link").forEach((link) => {
-        const titleElement = link.querySelector("span.sr-only");
-        if (titleElement) {
-          items.push({
-            title: titleElement.innerText.trim(),
-            href: link.href.split("?")[0], // Remove query parameters
-          });
-        }
-      });
-      return items;
-    });
-
-    // Filter by keywords
-    return jobs
-      .filter((job) => matchesKeywords(job.title))
-      .map((job) => ({ ...job, source: "LinkedIn" }));
+    return jobs;
   } catch (error) {
     console.error("LinkedIn scraping error:", error);
-    return []; // Return empty array on error
-  } finally {
-    await browser.close();
+    return [];
   }
 }
 

@@ -102,7 +102,7 @@ app.listen(PORT, () => {
 setInterval(() => {
   if (server) {
     axios
-      .get(`http://localhost:${PORT}/scrape-jobs`)
+      .get(`https://dubai-job-alert-bot.onrender.com/scrape-jobs`)
       .then(() => console.log("🔁 Self-ping successful"))
       .catch((err) => console.error("⚠️ Self-ping failed:", err.message));
   }
