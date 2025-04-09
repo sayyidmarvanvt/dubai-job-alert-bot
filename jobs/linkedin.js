@@ -5,7 +5,7 @@ const { matchesKeywords } = require("../utils/helper");
 async function scrapeLinkedIn() {
   try {
     const response = await axios.get(
-      "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=react&location=Dubai&f_E=1%2C2f_TPR=r86400"
+      "https://www.linkedin.com/jobs/search?f_E=1%2C2f_TPR&f_TPR=r86400&keywords=react&origin=JOB_SEARCH_PAGE_KEYWORD_AUTOCOMPLETE&refresh=true"
     );
     const $ = cheerio.load(response.data);
 
