@@ -17,7 +17,20 @@ const seenJobs = new Set();
 
 async function checkJobs() {
   try {
-    const results = await Promise.allSettled([scrapeLinkedIn(), scrapeBayt()]);    
+     console.log("Starting job check...");
+     const results = await Promise.allSettled([
+       scrapeLinkedIn().catch((e) => {
+         console.error("LinkedIn error:", e);
+         return [];
+       }),
+       scrapeBayt().catch((e) => {
+         console.error("Bayt error:", e);
+         return [];
+       }),
+     ]);    
+
+    console.log(results);
+    
     const allJobs = results
       .filter((r) => r.status === "fulfilled")
       .flatMap((r) => r.value);
@@ -79,15 +92,18 @@ client.once("ready", () => {
 
 client.login(BOT_TOKEN);
 
-// Start Express server
+let server;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  server = app;
 });
 
-// Self-ping every 14 minutes to prevent Render free tier timeout
+// Self-ping after server is confirmed running
 setInterval(() => {
-  axios
-    .get("https://dubai-job-alert-bot.onrender.com/scrape-jobs")
-    .then(() => console.log("🔁 Self-ping to keep Render alive"))
-    .catch((err) => console.error("⚠️ Self-ping failed:", err.message));
-}, 14 * 60 * 1000); // 14 minutes
+  if (server) {
+    axios
+      .get(`http://localhost:${PORT}/scrape-jobs`)
+      .then(() => console.log("🔁 Self-ping successful"))
+      .catch((err) => console.error("⚠️ Self-ping failed:", err.message));
+  }
+}, 14 * 60 * 1000);
