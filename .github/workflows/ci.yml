@@ -12,7 +12,6 @@ jobs:
       CI: true
       DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-      PORT: ${{ secrets.PORT }}
 
     runs-on: ubuntu-latest
 
