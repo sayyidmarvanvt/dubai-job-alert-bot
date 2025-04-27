@@ -1,5 +1,5 @@
 const scrapeLinkedIn = require("./linkedin");
-const scrapeBayt  = require("./bayt");
+// const scrapeBayt  = require("./bayt");
 const { getUniqueJobKey } = require("../utils/helper");
 const client = require("../discord/client");
 
