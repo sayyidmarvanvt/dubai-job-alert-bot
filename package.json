@@ -2,10 +2,13 @@
   "name": "y",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
-  },
+ "scripts": {
+  "start": "node index.js",
+  "start:dev": "node index.js",      
+  "test": "jest --detectOpenHandles --watchAll",
+  "lint": "eslint .",
+  "test:ci": "start-server-and-test start:dev http://localhost:3000 test"
+},
   "author": "",
   "license": "ISC",
   "description": "",
@@ -17,5 +20,13 @@
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.1",
+    "eslint": "^9.25.1",
+    "globals": "^16.0.0",
+    "jest": "^29.7.0",
+    "start-server-and-test": "^2.0.11",
+    "supertest": "^7.1.0"
   }
 }
