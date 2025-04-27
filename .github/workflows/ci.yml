@@ -10,7 +10,7 @@ jobs:
   build:
     env:
       CI: true
-      WAIT_ON_TIMEOUT: 100000
+      WAIT_ON_TIMEOUT: 60000
       DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       PORT: ${{ secrets.PORT }}
