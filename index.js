@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const { checkJobs } = require("./jobs/jobManager");
+const { checkJobs,seenJobs } = require("./jobs/jobManager");
 const cron = require("node-cron");
 const client = require("./discord/client");
 
@@ -8,8 +8,6 @@ const PORT = process.env.PORT;
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
 const app = express();
-const seenJobs = new Set();
-module.exports.seenJobs = seenJobs;
 
 app.get("/scrape-jobs", async (req, res) => {
   try {
@@ -28,7 +26,7 @@ app.get("/scrape-jobs", async (req, res) => {
 
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-  checkJobs(); // Initial job check
+  checkJobs(); 
 });
 
 client.login(BOT_TOKEN);

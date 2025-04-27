@@ -2,7 +2,8 @@ const scrapeLinkedIn = require("./linkedin");
 const scrapeBayt  = require("./bayt");
 const { getUniqueJobKey } = require("../utils/helper");
 const client = require("../discord/client");
-const { seenJobs } = require("../index");
+
+const seenJobs = new Set();
 
 async function checkJobs() {
   try {
@@ -12,10 +13,10 @@ async function checkJobs() {
         console.error("LinkedIn error:", e);
         return [];
       }),
-      scrapeBayt().catch((e) => {
-        console.error("Bayt error:", e);
-        return [];
-      }),
+    //   scrapeBayt().catch((e) => {
+    //     console.error("Bayt error:", e);
+    //     return [];
+    //   }),
     ]);
 
     const allJobs = results
@@ -53,4 +54,4 @@ async function checkJobs() {
   }
 }
 
-module.exports = { checkJobs };
+module.exports = { checkJobs,seenJobs };
