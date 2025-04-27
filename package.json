@@ -2,13 +2,13 @@
   "name": "y",
   "version": "1.0.0",
   "main": "index.js",
- "scripts": {
-  "start": "node index.js",
-  "start:dev": "node index.js",      
-  "test": "jest --detectOpenHandles --watchAll",
-  "lint": "eslint .",
-  "test:ci": "start-server-and-test start:dev http://localhost:3000 test"
-},
+  "scripts": {
+    "start": "node index.js",
+    "start:dev": "node index.js",
+    "test": "jest --detectOpenHandles --watchAll",
+    "lint": "eslint .",
+    "test:ci": "start-server-and-test start:dev http://localhost:3000 test --timeout=60000"
+  },
   "author": "",
   "license": "ISC",
   "description": "",
