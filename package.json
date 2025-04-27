@@ -7,7 +7,7 @@
     "start:dev": "node index.js",
     "test": "jest --detectOpenHandles",
     "lint": "eslint .",
-    "test:ci": "start-server-and-test start:dev http://localhost:3000 test"
+    "test:ci": "start-server-and-test start:dev http://localhost:3000 test WAIT_ON_TIMEOUT=10000"
   },
   "author": "",
   "license": "ISC",
