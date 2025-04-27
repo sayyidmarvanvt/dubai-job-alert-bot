@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const { checkJobs,seenJobs } = require("./jobs/jobManager");
+const { checkJobs } = require("./jobs/jobManager");
 const cron = require("node-cron");
 const client = require("./discord/client");
 
@@ -11,10 +11,9 @@ const app = express();
 
 app.get("/scrape-jobs", async (req, res) => {
   try {
-    await checkJobs();
+    await checkJobs();    
     res.status(200).json({
-      message: "✅ Job scraping completed.",
-      jobsCount: seenJobs.size,
+      message: "✅ Job scraping completed."
     });
   } catch (error) {
     res.status(500).json({

@@ -30,7 +30,7 @@ async function checkJobs() {
         uniqueJobsMap.set(key, job);
       }
     }
-
+    
     const uniqueJobs = Array.from(uniqueJobsMap.values());
     let newCount = 0;
     for (const job of uniqueJobs) {
