@@ -22,11 +22,19 @@ jest.mock("./jobs/jobManager", () => ({
   checkJobs: jest.fn().mockResolvedValue(5),
 }));
 
+jest.mock("node-cron", () => ({
+  schedule: jest.fn(), // Mock the cron scheduling function
+}));
+
+
+
 describe("GET /scrape-jobs", () => {
   it("should return 200 and message when scraping jobs", async () => {
     const response = await request(app).get("/scrape-jobs");
     expect(response.status).toBe(200);
     expect(response.body.message).toBe("✅ Job scraping completed.");
     expect(response.body.jobsCount).toBeDefined();
+    console.log("FINISHES");
+    
   });
 });
